@@ -82,6 +82,22 @@
         <!-- TAB CONTENT: DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active">
             
+            <!-- Onboarding Alert Banner (Hanya muncul jika jatah budget 0) -->
+            <div class="card" id="onboarding-banner" style="display: none; border: 1px solid var(--warning); background: rgba(245, 158, 11, 0.05); padding: 15px; margin-bottom: 15px;">
+                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                    <span style="font-size: 1.25rem;">💡</span>
+                    <div style="flex: 1;">
+                        <strong style="color: var(--warning); font-size: 0.85rem; display: block; margin-bottom: 4px;">Atur Anggaran Awal Anda!</strong>
+                        <p style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">
+                            Halo! Saldo belanja awal Anda saat ini masih Rp 0. Silakan isi saldo anggaran bulanan Anda terlebih dahulu di tab **Pengaturan** agar PWA SmartCash AI dapat memantau dan memproyeksikan sisa hari saldo Anda secara akurat.
+                        </p>
+                        <button class="btn btn-secondary" onclick="switchTab('settings')" style="margin-top: 10px; padding: 6px 12px; font-size: 0.72rem; border-color: var(--warning); color: var(--warning); background: transparent; width: auto; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-gear"></i> Atur Anggaran Sekarang
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Balance Card -->
             <div class="card balance-card">
                 <div class="balance-title">Sisa Saldo Anda</div>

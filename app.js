@@ -7,7 +7,7 @@
 let state = {
     currentUser: null,
     settings: {
-        budgetAwal: 1500000,
+        budgetAwal: 0,
         targetMenabung: 0,
         tanggalMulai: '',
         tanggalSelesai: ''
@@ -88,7 +88,7 @@ async function loadState() {
     } else {
         // Reset default untuk user baru
         state.settings = {
-            budgetAwal: 1500000,
+            budgetAwal: 0,
             targetMenabung: 0,
             tanggalMulai: '',
             tanggalSelesai: '',
@@ -230,6 +230,17 @@ function switchTab(tabName) {
 
 // Update seluruh elemen UI berdasarkan state terkini
 function updateUI() {
+    // Tampilkan / Sembunyikan Onboarding Banner jika budgetAwal === 0
+    const onboardingBanner = document.getElementById('onboarding-banner');
+    if (onboardingBanner) {
+        const budgetVal = parseFloat(state.settings.budgetAwal) || 0;
+        if (budgetVal === 0) {
+            onboardingBanner.style.display = 'block';
+        } else {
+            onboardingBanner.style.display = 'none';
+        }
+    }
+
     // 1. Hitung total pemasukan, pengeluaran, dan saldo
     let totalPemasukan = 0;
     let totalPengeluaran = 0;
