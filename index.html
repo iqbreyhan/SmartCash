@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartCash AI - Keuangan Mahasiswa</title>
+    <meta name="theme-color" content="#080c14">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3258/3258495.png">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css?v=19">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Halaman Login/Register Overlay -->
+    <div id="auth-screen" style="display: block; width: 100%; padding: 15px; box-sizing: border-box;">
+        <div class="auth-container">
+            <div class="auth-logo">
+                <i class="fa-solid fa-brain-circuit"></i>
+                <h1 id="auth-title">SmartCash AI</h1>
+                <p id="auth-subtitle">Kelola keuangan mahasiswa dengan presisi statistik</p>
+            </div>
+            
+            <div id="auth-message" style="display: none; padding: 10px 12px; font-size: 0.78rem; border-radius: 8px; text-align: center; font-weight: 600; margin-bottom: 5px;"></div>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label for="auth-username" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; display: block; color: var(--text-secondary);">Username</label>
+                <input type="text" id="auth-username" class="form-control" placeholder="Masukkan username Anda..." style="width: 100%;" required>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="auth-password" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; display: block; color: var(--text-secondary);">Password</label>
+                <input type="password" id="auth-password" class="form-control" placeholder="Masukkan password Anda..." style="width: 100%;" required>
+            </div>
+            
+            <button id="auth-btn-submit" class="btn btn-primary" style="width: 100%; font-weight: 700; padding: 12px;" onclick="handleAuthSubmit()">Masuk</button>
+            
+            <div class="auth-toggle-text">
+                <span id="auth-toggle-desc">Belum punya akun?</span>
+                <span id="auth-toggle-btn" class="auth-toggle-link" onclick="toggleAuthMode()">Daftar Sekarang</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="app-container" style="display: none;">
+        
+        <!-- Header -->
+        <header>
+            <div>
+                <h1>SmartCash AI</h1>
+                <p>Asisten Finansial Pintar Mahasiswa</p>
+            </div>
+            <div class="user-profile">
+                <div class="avatar" id="avatarName">M</div>
+            </div>
+        </header>
+
+        <!-- TAB CONTENT: DASHBOARD -->
+        <div id="tab-dashboard" class="tab-content active">
+            
+            <!-- Balance Card -->
+            <div class="card balance-card">
+                <div class="balance-title">Sisa Saldo Anda</div>
+                <div class="balance-value" id="dashboard-saldo">Rp 0</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px; display: flex; justify-content: space-between; background: rgba(0,0,0,0.15); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <span>Target Tabungan: <strong id="dashboard-saving-target" style="color: var(--secondary);">Rp 0</strong></span>
+                    <span>Saldo Belanja: <strong id="dashboard-spending-balance" style="color: var(--success);">Rp 0</strong></span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="dashboard-progress"></div>
+                </div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 6px; display: flex; justify-content: space-between;">
+                    <span id="dashboard-progress-label">Siklus Budget: Hari ke-0</span>
+                    <span id="dashboard-budget-target">Target: Rp 0</span>
+                </div>
+                
+                <div class="balance-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Pemasukan</span>
+                        <span class="stat-value income" id="dashboard-pemasukan">Rp 0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Pengeluaran</span>
+                        <span class="stat-value expense" id="dashboard-pengeluaran">Rp 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Forecast Widget -->
+            <div class="card ai-card" id="ai-widget-card">
+                <div class="ai-badge">AI Engine v1.0</div>
+                <div class="ai-title">
+                    <i class="fa-solid fa-brain" style="color: var(--secondary);"></i> AI Analisis Keuangan
+                </div>
+                
+                <div class="ai-forecast-grid">
+                    <div>
+                        <div class="ai-forecast-label">Prediksi Sisa Hari</div>
+                        <div class="ai-forecast-value" id="ai-sisa-hari">-</div>
+                    </div>
+                    <div>
+                        <div class="ai-forecast-label">Proyeksi Saldo Habis</div>
+                        <div class="ai-forecast-value" id="ai-tanggal-habis">-</div>
+                    </div>
+                </div>
+
+                <div class="ai-recom-box" id="ai-rekomendasi-box">
+                    Menghitung proyeksi keuangan Anda... Catat setidaknya 2 hari transaksi untuk mengaktifkan AI.
+                </div>
+                
+                <!-- AI Anomaly Alert Box -->
+                <div id="ai-anomaly-box" style="display: none; border-left: 4px solid var(--danger); background: rgba(239, 68, 68, 0.05); border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 0.78rem; line-height: 1.45; color: var(--text-primary); animation: fadeIn 0.3s ease-out;">
+                    <div style="font-weight: 700; color: var(--danger); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>AI Deteksi Anomali Transaksi (Z-Score)</span>
+                    </div>
+                    <span id="ai-anomaly-text">Mendeteksi perilaku belanja mencurigakan...</span>
+                </div>
+            </div>
+
+            <!-- Category Budget Limits Card -->
+            <div class="card" id="category-limits-card" style="display: none;">
+                <div class="ai-title">
+                    <i class="fa-solid fa-list-check" style="color: var(--primary);"></i> Limit Anggaran Kategori
+                </div>
+                <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 12px;">
+                    Pantau limit pengeluaran bulanan Anda untuk setiap kategori. Batas limit yang dilewati akan memicu peringatan merah.
+                </p>
+                <div id="category-limits-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Diisi lewat Javascript -->
+                </div>
+            </div>
+
+            <!-- Recent Transactions Section -->
+            <div class="section-title">
+                <span>Transaksi Terbaru</span>
+                <span class="view-all" onclick="switchTab('transaksi')">Lihat Semua</span>
+            </div>
+
+            <div class="transaction-list" id="dashboard-transaction-list">
+                <!-- Data transaksi akan dimasukkan lewat Javascript -->
+            </div>
+            
+        </div>
+
+        <!-- TAB CONTENT: TRANSAKSI -->
+        <div id="tab-transaksi" class="tab-content">
+            <div class="card">
+                <div class="section-title" style="margin-bottom: 15px;">
+                    <span>Filter Kategori</span>
+                </div>
+                <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px;" id="category-filters">
+                    <button class="btn btn-secondary active-filter" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('semua', this)">Semua</button>
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('makanan', this)">Makanan</button>
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('kos', this)">Kos</button>
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('pendidikan', this)">Kuliah</button>
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('transportasi', this)">Transport</button>
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('hiburan', this)">Hiburan</button>
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('pemasukan', this)">Pemasukan</button>
+                </div>
+
+                <div class="transaction-list" id="main-transaction-list">
+                    <!-- Data transaksi lengkap -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT: ANALISIS AI -->
+        <div id="tab-analisis" class="tab-content">
+            <!-- Disclaimer Kualitas Data -->
+            <div id="data-quality-disclaimer" style="display: none; border-left: 4px solid var(--warning); background: rgba(245, 158, 11, 0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 0.78rem; line-height: 1.4; color: var(--text-primary);">
+                <div style="font-weight: 700; color: var(--warning); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>Sinyal Kualitas Data AI</span>
+                </div>
+                <span id="data-quality-text">Mengevaluasi volume data...</span>
+            </div>
+
+            <!-- 1. What-If Simulation Card (Slider) -->
+            <div class="card">
+                <div class="ai-title">
+                    <i class="fa-solid fa-sliders" style="color: var(--secondary);"></i> Simulasi What-If Mandiri
+                </div>
+                <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 12px;">
+                    Simulasikan sisa hari saldo Anda berdasarkan perkiraan belanja harian.
+                </p>
+                
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">
+                        <span>Rencana Pengeluaran Harian:</span>
+                        <span id="slider-value" style="color: var(--secondary); font-family: 'Outfit';">Rp 50.000 / hari</span>
+                    </div>
+                    <input type="range" id="whatif-slider" min="10000" max="250000" step="5000" value="50000" style="width: 100%; accent-color: var(--secondary); cursor: pointer;">
+                </div>
+                
+                <div class="ai-recom-box" style="border-left-color: var(--primary); background: rgba(138, 92, 246, 0.05); border-radius: 8px; padding: 12px;">
+                    <div style="font-size: 0.78rem; line-height: 1.45; color: var(--text-primary);" id="slider-result">
+                        <i class="fa-solid fa-hourglass-half" style="color: var(--primary); margin-right: 6px;"></i> Atur slider untuk melihat proyeksi sisa hari saldo belanja Anda.
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Weekend vs Weekday Analysis Card -->
+            <div class="card">
+                <div class="ai-title">
+                    <i class="fa-solid fa-calendar-days" style="color: var(--secondary);"></i> Analisis Pola Pengeluaran Akhir Pekan
+                </div>
+                <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 12px;">
+                    Perbandingan rata-rata pengeluaran Hari Kerja (Senin-Kamis) vs Akhir Pekan (Jumat-Minggu).
+                </p>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 4px;">
+                            <span>Rata-Rata Hari Kerja (Senin - Kamis):</span>
+                            <strong id="weekend-weekday-val">Rp 0 / hari</strong>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                            <div id="weekday-bar" style="width: 0%; height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 4px;">
+                            <span>Rata-Rata Akhir Pekan (Jumat - Minggu):</span>
+                            <strong id="weekend-weekend-val" style="color: var(--secondary);">Rp 0 / hari</strong>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                            <div id="weekend-bar" style="width: 0%; height: 100%; background: var(--secondary); border-radius: 4px; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-recom-box" style="border-left-color: var(--secondary); background: rgba(236, 72, 153, 0.05); border-radius: 8px; padding: 12px; font-size: 0.78rem; line-height: 1.45; color: var(--text-primary);" id="weekend-ai-advice">
+                    Menganalisis transaksi Anda... Masukkan data transaksi untuk mendapatkan tips penghematan akhir pekan dari AI.
+                </div>
+            </div>
+
+            <!-- 2. Kurva Proyeksi Finansial (SVG Chart) -->
+            <div class="card">
+                <div class="ai-title">
+                    <i class="fa-solid fa-chart-line" style="color: var(--primary);"></i> Kurva Proyeksi Finansial
+                </div>
+                <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 12px;">
+                    Garis lurus = pengeluaran aktual. Garis putus-putus = proyeksi sisa uang belanja.
+                </p>
+
+                <!-- Chart Container (SVG Based untuk visualisasi offline murni) -->
+                <div class="chart-container" id="svg-chart-wrapper">
+                    <!-- Dinonaktifkan jika data tidak cukup -->
+                    <div id="chart-empty-state" class="empty-state">
+                        <i class="fa-solid fa-chart-area empty-state-icon"></i>
+                        <p>Catat pengeluaran Anda minimal di 2 hari berbeda untuk memplot grafik tren.</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 5px; padding: 0 10px;">
+                    <span id="chart-start-date">Mulai</span>
+                    <span id="chart-end-date">Kiriman Berikutnya</span>
+                </div>
+            </div>
+
+            <!-- Tombol Mode Sidang Skripsi (Toggle Panel Akademik) -->
+            <button class="btn btn-secondary" id="toggle-academic-btn" style="width: 100%; margin-top: 15px; border-color: var(--primary); color: var(--primary); background: transparent;" onclick="toggleAcademicPanel()">
+                <i class="fa-solid fa-graduation-cap"></i> Mode Sidang Skripsi (Tampilkan Statistik & Teori)
+            </button>
+
+            <!-- Panel Khusus Dosen Penguji / Akademik (Disembunyikan agar tampilan bersih) -->
+            <div id="academic-panel" style="display: none; margin-top: 15px;">
+                <!-- 3. Detail Nilai Akademik Skripsi (Parameter Evaluasi) -->
+                <div class="card">
+                    <div class="ai-title">
+                        <i class="fa-solid fa-calculator" style="color: var(--secondary);"></i> Parameter Statistik AI & Kategori
+                    </div>
+                    <div class="ai-forecast-grid" style="grid-template-columns: 1fr; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: var(--text-secondary);">R-Squared (Koefisien Determinasi)</span>
+                            <strong id="stat-r2">0.00</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: var(--text-secondary);">RMSE Regresi Linear (AI)</span>
+                            <strong id="stat-rmse">Rp 0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: var(--text-secondary);">RMSE Naive Average (Baseline)</span>
+                            <strong id="stat-rmse-naive">Rp 0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: var(--text-secondary);">Burn Rate Coefficient (BRC)</span>
+                            <strong id="stat-brc">0.00</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: var(--text-secondary);">Rata-rata Pengeluaran Harian</span>
+                            <strong id="stat-avg">Rp 0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: var(--text-secondary);">Kecepatan Pengeluaran (Slope)</span>
+                            <strong id="stat-slope">Rp 0/hari</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: var(--text-secondary);">Kategori Belanja Terboros</span>
+                            <strong id="stat-cat-boros">-</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                            <span style="color: var(--text-secondary);">Potensi Hemat (20% Kategori Boros)</span>
+                            <strong id="stat-recom-cat" style="color: var(--success);">Rp 0/hari</strong>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.65rem; color: var(--text-muted); line-height: 1.35; margin-top: 8px;">
+                        *Nilai R-Squared mendekati 1.00 menunjukkan pola konsumsi harian Anda sangat konsisten, sementara nilai RMSE yang kecil menandakan tingkat error ramalan AI sangat rendah. BRC > 1.00 menunjukkan pemborosan.
+                    </p>
+                </div>
+
+                <!-- Fitur Backtesting & Riwayat Multi-Siklus -->
+                <div class="card">
+                    <div class="ai-title">
+                        <i class="fa-solid fa-history" style="color: var(--warning);"></i> Riwayat & Validasi Backtesting AI
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px;">
+                        Membandingkan proyeksi AI dengan data riil pada siklus/bulan sebelumnya untuk membuktikan validitas tingkat akurasi model AI Anda secara empiris.
+                    </p>
+                    <div id="backtest-history-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 10px;">
+                            Belum ada riwayat siklus sebelumnya.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Justifikasi Pemilihan Metode Secara Akademik -->
+                <div class="card">
+                    <div class="ai-title">
+                        <i class="fa-solid fa-graduation-cap" style="color: var(--success);"></i> Justifikasi Metode Akademik
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.45; overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; text-align: left; min-width: 320px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 700;">
+                                    <th style="padding: 4px;">Metode</th>
+                                    <th style="padding: 4px;">Prediksi Habis</th>
+                                    <th style="padding: 4px;">Justifikasi di Skripsi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                    <td style="padding: 6px 4px; font-weight: 600; color: var(--primary);">Regresi Linear</td>
+                                    <td style="padding: 6px 4px; color: var(--success); font-weight: 600;">Ya</td>
+                                    <td style="padding: 6px 4px;">Memetakan tren kumulatif pengeluaran untuk memproyeksikan hari ke-berapa grafik memotong garis batas tabungan ($y = \text{budget}$).</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                    <td style="padding: 6px 4px; font-weight: 600; color: var(--text-muted);">Moving Average</td>
+                                    <td style="padding: 6px 4px; color: var(--danger);">Tidak</td>
+                                    <td style="padding: 6px 4px;">Hanya menghaluskan data historis fluktuasi jangka pendek, tidak memiliki kemampuan proyeksi titik potong masa depan.</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 4px; font-weight: 600; color: var(--text-muted);">Exp. Smoothing</td>
+                                    <td style="padding: 6px 4px; color: var(--danger);">Tidak</td>
+                                    <td style="padding: 6px 4px;">Hanya meramalkan 1 titik pengeluaran hari berikutnya (t+1), tidak memodelkan tren saldo habis jangka panjang.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. Explainable AI (XAI) Card -->
+                <div class="card">
+                    <div class="ai-title">
+                        <i class="fa-solid fa-circle-info" style="color: var(--info);"></i> Bagaimana AI Menghitung Rekomendasi?
+                    </div>
+                    <div style="font-size: 0.74rem; color: var(--text-secondary); line-height: 1.5; display: flex; flex-direction: column; gap: 8px;">
+                        <p>
+                            💡 <strong>Batas Belanja Harian:</strong> Didapat dari formula $\frac{\text{Sisa Saldo} - \text{Target Tabungan}}{\text{Sisa Hari}}$. Ini memotong jatah tabungan agar tidak terpakai untuk belanja harian.
+                        </p>
+                        <p>
+                            📊 <strong>Kurva Tren:</strong> Persamaan Regresi Linear ($y = mx + c$) memodelkan kecepatan akumulasi pengeluaran harian ($m$). Titik perpotongan antara garis regresi dan garis tabungan menghasilkan tanggal habisnya sisa uang belanja Anda.
+                        </p>
+                        <p>
+                            ⚠️ <strong>Status Krisis (BRC):</strong> Mengukur rasio pembakaran uang. Jika pengeluaran harian Anda melebihi jatah ideal awal ($\text{BRC} > 1.0$), status berubah menjadi Peringatan atau Sangat Kritis demi mengamankan target tabungan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT: PENGATURAN -->
+        <div id="tab-pengaturan" class="tab-content">
+            <!-- Database Connection Status Card -->
+            <div class="card" style="animation: fadeIn 0.3s ease-out;">
+                <div class="ai-title">
+                    <i class="fa-solid fa-database" style="color: var(--info);"></i> Status Integrasi Database
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; background: rgba(0,0,0,0.15); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <span>Mode Database:</span>
+                    <span id="db-status-badge" style="font-weight: 700; color: var(--warning);">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Mengecek...
+                    </span>
+                </div>
+                <p style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.45; margin-top: 10px;">
+                    ℹ️ Secara default, aplikasi menggunakan <strong>LocalStorage (Offline Fallback)</strong>. Hubungkan ke database online (PostgreSQL Cloud) dengan mengisi data URL & Key Supabase di file <code>config.js</code> proyek Anda.
+                </p>
+            </div>
+            <div class="card">
+                <div class="ai-title"><i class="fa-solid fa-sliders" style="color: var(--primary);"></i> Atur Siklus Anggaran</div>
+                
+                <div class="form-group">
+                    <label for="settings-budget">Uang Bulanan Awal (Budget)</label>
+                    <input type="number" id="settings-budget" class="form-control" placeholder="Contoh: 1500000">
+                </div>
+
+                <div class="form-group">
+                    <label for="settings-saving-target">Target Menabung Bulanan</label>
+                    <input type="number" id="settings-saving-target" class="form-control" placeholder="Contoh: 300000">
+                </div>
+
+                <div class="form-group">
+                    <label for="settings-start-date">Tanggal Mulai Siklus</label>
+                    <input type="date" id="settings-start-date" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="settings-end-date">Tanggal Kiriman Berikutnya (Target)</label>
+                    <input type="date" id="settings-end-date" class="form-control">
+                </div>
+
+            </div>
+
+            <div class="card">
+                <div class="ai-title"><i class="fa-solid fa-list-check" style="color: var(--secondary);"></i> Atur Limit Kategori Bulanan</div>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px;">
+                    Tentukan limit pengeluaran bulanan maksimum untuk setiap kategori. Setel ke 0 jika tidak memiliki limit.
+                </p>
+                <div class="form-group">
+                    <label for="limit-makanan">Makanan & Minuman (Rp)</label>
+                    <input type="number" id="limit-makanan" class="form-control" placeholder="Contoh: 500000" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="limit-kos">Kos & Kebutuhan Bulanan (Rp)</label>
+                    <input type="number" id="limit-kos" class="form-control" placeholder="Contoh: 800000" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="limit-pendidikan">Kuliah & Pendidikan (Rp)</label>
+                    <input type="number" id="limit-pendidikan" class="form-control" placeholder="Contoh: 200000" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="limit-transportasi">Transportasi (Rp)</label>
+                    <input type="number" id="limit-transportasi" class="form-control" placeholder="Contoh: 150000" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="limit-hiburan">Hiburan & Nongkrong (Rp)</label>
+                    <input type="number" id="limit-hiburan" class="form-control" placeholder="Contoh: 300000" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="limit-lainnya">Lainnya (Rp)</label>
+                    <input type="number" id="limit-lainnya" class="form-control" placeholder="Contoh: 100000" value="0">
+                </div>
+                
+                <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="saveSettings()">Simpan Konfigurasi</button>
+            </div>
+
+            <!-- Demo Seed Data Button (Untuk kemudahan pengujian sidang skripsi) -->
+            <div class="card" style="border: 1px dashed var(--secondary);">
+                <div class="ai-title"><i class="fa-solid fa-vial" style="color: var(--secondary);"></i> Simulasi Sidang Skripsi</div>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px;">
+                    Gunakan tombol di bawah untuk menyuntikkan data transaksi dummy selama 5 hari berturut-turut. AI akan langsung mendeteksi tren pengeluaran dan melakukan peramalan linear secara otomatis.
+                </p>
+                <button class="btn btn-secondary" style="width: 100%; border-color: var(--secondary); color: var(--secondary);" onclick="seedDemoData()">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Suntik Data Simulasi (5 Hari)
+                </button>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 8px; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);" onclick="clearAllData()">
+                    <i class="fa-solid fa-trash-can"></i> Hapus Semua Data Transaksi
+                </button>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 8px; color: var(--warning); border-color: rgba(245, 158, 11, 0.3);" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i> Keluar (Logout)
+                </button>
+            </div>
+        </div>
+
+        <!-- FAB: Tambah Transaksi -->
+        <button class="fab" onclick="openModal()"><i class="fa-solid fa-plus"></i></button>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('dashboard')" id="nav-dashboard">
+                <i class="fa-solid fa-wallet"></i>
+                <span>Dompet</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('transaksi')" id="nav-transaksi">
+                <i class="fa-solid fa-list-ul"></i>
+                <span>Transaksi</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('analisis')" id="nav-analisis">
+                <i class="fa-solid fa-brain"></i>
+                <span>Analisis AI</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('pengaturan')" id="nav-pengaturan">
+                <i class="fa-solid fa-gear"></i>
+                <span>Pengaturan</span>
+            </div>
+        </nav>
+
+    </div>
+
+    <!-- Modal Form Tambah Transaksi -->
+    <div class="modal" id="transaction-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tambah Transaksi</h2>
+                <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Segmented Control untuk Tipe -->
+            <div class="segmented-control">
+                <div class="segment-item active" id="segment-pengeluaran" onclick="setTipeTransaksi('pengeluaran')">Pengeluaran</div>
+                <div class="segment-item" id="segment-pemasukan" onclick="setTipeTransaksi('pemasukan')">Pemasukan</div>
+            </div>
+
+            <div class="form-group">
+                <label for="t-amount">Jumlah Uang (Rp)</label>
+                <input type="number" id="t-amount" class="form-control" placeholder="Contoh: 25000" required>
+            </div>
+
+            <div class="form-group" style="position: relative;">
+                <label for="t-desc">Keterangan / Deskripsi</label>
+                <input type="text" id="t-desc" class="form-control" placeholder="Contoh: Beli Makan Siang" autocomplete="off" required>
+                <div id="desc-suggestions-box" class="suggestions-box"></div>
+            </div>
+
+            <div class="form-group" id="group-kategori">
+                <label for="t-category">Kategori</label>
+                <select id="t-category" class="form-control">
+                    <option value="makanan">Makanan & Minuman</option>
+                    <option value="kos">Kos & Kebutuhan Bulanan</option>
+                    <option value="pendidikan">Kuliah & Pendidikan</option>
+                    <option value="transportasi">Transportasi</option>
+                    <option value="hiburan">Hiburan & Nongkrong</option>
+                    <option value="lainnya">Lainnya</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="t-date">Tanggal Transaksi</label>
+                <input type="date" id="t-date" class="form-control" required>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closeModal()">Batal</button>
+                <button class="btn btn-primary" onclick="submitTransaction()">Simpan Transaksi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Supabase JS Client Library CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+    <script src="regression.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // Register Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('PWA Service Worker terdaftar dengan sukses!', reg))
+                    .catch(err => console.log('Gagal mendaftarkan Service Worker PWA', err));
+            });
+        }
+    </script>
+</body>
+</html>
