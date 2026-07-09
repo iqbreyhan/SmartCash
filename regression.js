@@ -306,10 +306,15 @@ class FinancialForecast {
                 }
         } else if (x.length === 1 && saldoSaatIni < budgetAwal) {
             // Fallback sederhana jika baru 1 hari mencatat pengeluaran
-            const pengeluaranHariPertama = y[0];
-            const perkiraanSisaHari = Math.max(0, saldoEfektifBelanja) / pengeluaranHariPertama;
+            const pengeluaranHariPertama = parseFloat(y[0]) || 0;
+            const perkiraanSisaHari = pengeluaranHariPertama > 0 
+                ? Math.max(0, saldoEfektifBelanja) / pengeluaranHariPertama
+                : totalHariSiklus;
+                
+            const validSisaHari = (isFinite(perkiraanSisaHari) && !isNaN(perkiraanSisaHari)) ? perkiraanSisaHari : totalHariSiklus;
+            
             const tanggalHabis = new Date(today);
-            tanggalHabis.setDate(today.getDate() + Math.floor(perkiraanSisaHari));
+            tanggalHabis.setDate(today.getDate() + Math.floor(validSisaHari));
             
             tanggalHabisPrediksi = tanggalHabis;
             sisaHariUangHabis = Math.max(0, Math.ceil((tanggalHabis - today) / (1000 * 60 * 60 * 24)));
@@ -317,8 +322,8 @@ class FinancialForecast {
             status = "Analisis Awal";
             statusColor = "#3B82F6"; // Biru
             statusMessage = targetMenabung > 0
-                ? `Berdasarkan pengeluaran hari pertama, saldo belanja diperkirakan bertahan sekitar ${Math.floor(perkiraanSisaHari)} hari sebelum menyentuh batas tabungan.`
-                : `Berdasarkan pengeluaran hari pertama Anda, uang diperkirakan bertahan sekitar ${Math.floor(perkiraanSisaHari)} hari lagi (hingga ${this.formatDateIndo(tanggalHabis)}).`;
+                ? `Berdasarkan pengeluaran hari pertama, saldo belanja diperkirakan bertahan sekitar ${Math.floor(validSisaHari)} hari sebelum menyentuh batas tabungan.`
+                : `Berdasarkan pengeluaran hari pertama Anda, uang diperkirakan bertahan sekitar ${Math.floor(validSisaHari)} hari lagi (hingga ${this.formatDateIndo(tanggalHabis)}).`;
         }
 
         // Rekomendasi batas anggaran harian (memotong target tabungan)

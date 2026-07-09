@@ -1077,6 +1077,28 @@ async function seedDemoData() {
     const today = new Date();
     state.transaksi = []; // bersihkan data lama agar hasil grafik bersih
     
+    // Sesuaikan tanggal siklus budget agar data dummy 10 hari masuk ke siklus aktif
+    const startCycle = new Date(today);
+    startCycle.setDate(today.getDate() - 9);
+    const endCycle = new Date(today);
+    endCycle.setDate(today.getDate() + 20);
+    
+    state.settings.tanggalMulai = formatDateISO(startCycle);
+    state.settings.tanggalSelesai = formatDateISO(endCycle);
+    state.settings.budgetAwal = 1500000;
+    state.settings.targetMenabung = 300000;
+    
+    // Update input settings jika elemen ada di DOM
+    const startInput = document.getElementById('settings-start-date');
+    const endInput = document.getElementById('settings-end-date');
+    const budgetInput = document.getElementById('settings-budget');
+    const savingInput = document.getElementById('settings-saving');
+    
+    if (startInput) startInput.value = state.settings.tanggalMulai;
+    if (endInput) endInput.value = state.settings.tanggalSelesai;
+    if (budgetInput) budgetInput.value = state.settings.budgetAwal;
+    if (savingInput) savingInput.value = state.settings.targetMenabung;
+
     // Suntik data pengeluaran teratur dalam 9 hari berturut-turut ke belakang
     const baseAmount = 60000;
     const categories = [
