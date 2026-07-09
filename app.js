@@ -151,6 +151,13 @@ function setupEventListeners() {
         if (e.target === modal) closeModal();
     });
     
+    const profileModal = document.getElementById('profile-modal');
+    if (profileModal) {
+        profileModal.addEventListener('click', (e) => {
+            if (e.target === profileModal) closeProfileModal();
+        });
+    }
+    
     // Auto-kategori & Custom Suggestions Box untuk Deskripsi
     const descInput = document.getElementById('t-desc');
     const suggestionsBox = document.getElementById('desc-suggestions-box');
@@ -2168,4 +2175,46 @@ function exportToPDF() {
         </html>
     `);
     printWindow.document.close();
+}
+
+// Membuka modal profil pengguna dengan data terikat dinamis
+function openProfileModal() {
+    const user = state.currentUser || localStorage.getItem('smartcash_current_user') || 'user';
+    const email = `${user.toLowerCase()}@mahasiswa.ac.id`;
+    
+    // Bind data ke modal
+    const usernameEl = document.getElementById('profile-username');
+    const emailEl = document.getElementById('profile-email');
+    const avatarEl = document.getElementById('profile-avatar-large');
+    
+    if (usernameEl) usernameEl.textContent = user;
+    if (emailEl) emailEl.textContent = email;
+    if (avatarEl) avatarEl.textContent = user.substring(0, 1).toUpperCase();
+    
+    // Bind detail anggaran
+    const budgetAwal = state.settings.budgetAwal || 0;
+    const targetTabungan = state.settings.targetTabungan || 0;
+    
+    const budgetEl = document.getElementById('profile-budget');
+    const savingEl = document.getElementById('profile-saving');
+    
+    if (budgetEl) budgetEl.textContent = formatRupiah(budgetAwal);
+    if (savingEl) savingEl.textContent = formatRupiah(targetTabungan);
+    
+    // Bind klaster belanja saat ini
+    const clusterEl = document.getElementById('profile-cluster');
+    const activeClusterBadge = document.getElementById('kmeans-cluster-badge');
+    if (clusterEl && activeClusterBadge) {
+        clusterEl.textContent = activeClusterBadge.textContent;
+        clusterEl.style.color = activeClusterBadge.style.color;
+    }
+    
+    const modal = document.getElementById('profile-modal');
+    if (modal) modal.classList.add('active');
+}
+
+// Menutup modal profil pengguna
+function closeProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    if (modal) modal.classList.remove('active');
 }
