@@ -570,16 +570,7 @@ function updateUI() {
     const nbRecallEl = document.getElementById('nb-recall');
     const kmWcssEl = document.getElementById('km-wcss');
     
-    // Hitung fitur-fitur untuk K-Means
-    const totalPengeluaran = state.transaksi
-        .filter(t => t.tipe === 'pengeluaran')
-        .reduce((sum, t) => sum + (parseFloat(t.jumlah) || 0), 0);
-        
-    const totalPemasukan = state.transaksi
-        .filter(t => t.tipe === 'pemasukan')
-        .reduce((sum, t) => sum + (parseFloat(t.jumlah) || 0), 0);
-        
-    const budgetAwal = state.settings.budgetAwal || 1500000;
+    // Fitur-fitur untuk K-Means (menggunakan variabel yang sudah dihitung di awal fungsi)
     
     // Fitur 1: Rata-rata belanja harian
     const pengeluaranSaja = state.transaksi.filter(t => t.tipe === 'pengeluaran');
