@@ -172,19 +172,19 @@ class FinancialForecast {
             ? Math.round((nominalTerboros * 0.20) / maxHariData) 
             : 0;
 
-        // Default hasil analisis jika data kurang
-        let status = "Stabil";
-        let statusColor = "#10B981"; // Hijau
-        let statusMessage = "Data transaksi Anda masih belum cukup untuk dianalisis oleh AI. Terus catat pengeluaran Anda!";
-        let tanggalHabisPrediksi = null;
-        let sisaHariUangHabis = null;
-        let rSquaredVal = 0;
-        let slopeVal = 0;
-        let interceptVal = 0;
+        // Default hasil analisis jika data kurang (Estimasi Awal / Cold-Start)
+        let status = "Estimasi Awal";
+        let statusColor = "var(--primary)";
+        let statusMessage = "Menggunakan proyeksi anggaran ideal. Proyeksi regresi akan aktif dinamis setelah mencatat transaksi minimal di 2 hari berbeda.";
+        let tanggalHabisPrediksi = end;
+        let sisaHariUangHabis = sisaHariTarget;
+        let rSquaredVal = 1.0;
+        let slopeVal = -jatahIdealAwal;
+        let interceptVal = budgetAwal - targetMenabung;
         let rmseVal = 0;
         let rmseNaiveVal = 0;
         let hasSplitValidation = false;
-        let hariHabis = 0;
+        let hariHabis = totalHariSiklus;
         let stdErrorEst = 0;
 
         // Minimal butuh data dari 2 hari berbeda untuk regresi linear

@@ -3,7 +3,7 @@
  * Skripsi: Aplikasi Pencatat Keuangan Mahasiswa + AI Forecast
  */
 
-const CACHE_NAME = 'smartcash-ai-v26';
+const CACHE_NAME = 'smartcash-ai-v27';
 const ASSETS = [
   'index.html',
   'styles.css',

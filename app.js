@@ -615,16 +615,28 @@ function updateUI() {
         // Render Elbow Table WCSS per K
         renderElbowTable(result.elbow);
     } else {
-        if (kmeansClusterBadge) kmeansClusterBadge.textContent = "Menunggu Data...";
-        if (kmeansAiRecom) {
-            kmeansAiRecom.innerHTML = `<i class="fa-solid fa-circle-info" style="color: var(--warning); margin-right: 6px;"></i> AI membutuhkan minimal 3 transaksi pengeluaran untuk menentukan klaster belanja Anda secara akurat.`;
+        // Jalankan clustering dengan baseline [0, 1, 0] untuk profil awal (Cold-Start)
+        const result = kmeansRecommender.runClustering([0, 1, 0]);
+        if (kmeansClusterBadge && kmeansAiRecom) {
+            kmeansClusterBadge.textContent = `${result.metadata.name} (Estimasi)`;
+            kmeansClusterBadge.style.color = result.metadata.color;
+            kmeansClusterBadge.style.background = `rgba(255,255,255,0.05)`;
+            kmeansClusterBadge.style.borderColor = result.metadata.color;
+            kmeansClusterBadge.style.border = `1px solid ${result.metadata.color}`;
+            
+            kmeansAiRecom.innerHTML = `
+                <i class="fa-solid fa-brain" style="color: ${result.metadata.color}; margin-right: 6px;"></i>
+                <strong>Klaster Awal (Cold-Start):</strong> ${result.metadata.name}<br>
+                <strong>Deskripsi:</strong> Anda belum memiliki transaksi pengeluaran yang cukup. Berdasarkan setelan anggaran awal, AI memprediksi Anda masuk kelompok ini.<br><br>
+                💡 <strong>Tips Rekomendasi Kelompok:</strong> ${result.metadata.advice}
+            `;
         }
-        if (kmWcssEl) kmWcssEl.textContent = "0.0000";
+        if (kmWcssEl) {
+            kmWcssEl.textContent = result.wcss.toFixed(4);
+        }
         
-        const kmElbowTable = document.querySelector('#km-elbow-table tbody');
-        if (kmElbowTable) {
-            kmElbowTable.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 8px;">Menunggu minimal 3 transaksi pengeluaran...</td></tr>`;
-        }
+        // Render Elbow Table WCSS per K untuk profil baseline
+        renderElbowTable(result.elbow);
     }
     
     // Jalankan Evaluasi Naive Bayes secara dinamis
@@ -1211,19 +1223,9 @@ function renderAnalysisChart() {
     document.getElementById('chart-start-date').textContent = formatDateIndoStr(state.settings.tanggalMulai);
     document.getElementById('chart-end-date').textContent = formatDateIndoStr(state.settings.tanggalSelesai);
     
-    // Minimal butuh pengeluaran di 2 hari berbeda untuk regresi linear
     const pengeluaranSaja = state.transaksi.filter(t => t.tipe === 'pengeluaran');
-    const uniqueDaysCount = new Set(pengeluaranSaja.map(t => t.tanggal)).size;
     
-    if (uniqueDaysCount < 2) {
-        emptyState.style.display = 'block';
-        // Hapus SVG lama jika ada
-        const existingSvg = container.querySelector('svg');
-        if (existingSvg) existingSvg.remove();
-        return;
-    }
-    
-    // Sembunyikan empty state
+    // Sembunyikan empty state (selalu tampilkan visualisasi baseline/proyeksi)
     emptyState.style.display = 'none';
     
     // Hapus SVG lama jika ada
