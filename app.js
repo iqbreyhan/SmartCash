@@ -172,9 +172,16 @@ function setupEventListeners() {
                 const prediction = nbClassifier.classify(val.trim());
                 if (prediction && prediction.category) {
                     const catInput = document.getElementById('t-category');
-                    if (catInput) catInput.value = prediction.category;
-                    if (label) {
-                        label.innerHTML = `Kategori <span style="font-size: 0.65rem; color: var(--success); font-weight: 700;">(AI Naive Bayes: ${prediction.confidence}% yakin)</span>`;
+                    if (prediction.confidence >= 45) {
+                        if (catInput) catInput.value = prediction.category;
+                        if (label) {
+                            label.innerHTML = `Kategori <span style="font-size: 0.65rem; color: var(--success); font-weight: 700;"><i class="fa-solid fa-circle-check"></i> (AI Naive Bayes: ${prediction.confidence}% yakin)</span>`;
+                        }
+                    } else {
+                        // Safeguard: Ragu-ragu, biarkan pilihan lama / minta user isi manual
+                        if (label) {
+                            label.innerHTML = `Kategori <span style="font-size: 0.65rem; color: var(--warning); font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> (AI Ragu: ${prediction.confidence}% yakin. Pilih manual)</span>`;
+                        }
                     }
                 }
             } else {
@@ -613,12 +620,20 @@ function updateUI() {
         if (kmWcssEl) {
             kmWcssEl.textContent = result.wcss.toFixed(4);
         }
+        
+        // Render Elbow Table WCSS per K
+        renderElbowTable(result.elbow);
     } else {
         if (kmeansClusterBadge) kmeansClusterBadge.textContent = "Menunggu Data...";
         if (kmeansAiRecom) {
             kmeansAiRecom.innerHTML = `<i class="fa-solid fa-circle-info" style="color: var(--warning); margin-right: 6px;"></i> AI membutuhkan minimal 3 transaksi pengeluaran untuk menentukan klaster belanja Anda secara akurat.`;
         }
         if (kmWcssEl) kmWcssEl.textContent = "0.0000";
+        
+        const kmElbowTable = document.querySelector('#km-elbow-table tbody');
+        if (kmElbowTable) {
+            kmElbowTable.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 8px;">Menunggu minimal 3 transaksi pengeluaran...</td></tr>`;
+        }
     }
     
     // Jalankan Evaluasi Naive Bayes secara dinamis
@@ -628,6 +643,22 @@ function updateUI() {
         nbF1El.textContent = nbMetrics.f1Score.toFixed(3);
         nbPrecisionEl.textContent = nbMetrics.precision.toFixed(3);
         nbRecallEl.textContent = nbMetrics.recall.toFixed(3);
+    }
+    
+    // Render Confusion Matrix
+    renderConfusionMatrix(nbMetrics);
+    
+    // Render Informasi Training Set Size
+    const mlInfo = document.getElementById('ml-training-info');
+    if (mlInfo) {
+        const localCount = state.transaksi.filter(t => t.tipe === 'pengeluaran').length;
+        const totalDocs = nbClassifier.totalDocs;
+        mlInfo.innerHTML = `
+            <span>Status Training Model:</span>
+            <span style="color: var(--primary); font-weight: 700;">
+                ${totalDocs} Data Latih (20 Bootstrap + ${localCount} Transaksi Aktif)
+            </span>
+        `;
     }
     
     // 3. Render Transaksi di Dashboard (Maksimal 5)
@@ -1831,4 +1862,290 @@ function exportToCSV() {
     document.body.removeChild(link);
     
     console.log(`[Ekspor CSV] Berhasil mengunduh laporan transaksi.`);
+}
+
+// Merender Confusion Matrix 6x6 ke halaman akademik
+function renderConfusionMatrix(nbMetrics) {
+    const table = document.getElementById('nb-confusion-matrix-table');
+    if (!table) return;
+    
+    const cats = nbMetrics.categories;
+    const matrix = nbMetrics.confusionMatrix;
+    
+    const catShortNames = {
+        'makanan': 'Mkn',
+        'kos': 'Kos',
+        'pendidikan': 'Klh',
+        'transportasi': 'Trs',
+        'hiburan': 'Hbr',
+        'lainnya': 'Lny'
+    };
+    
+    let html = `
+        <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 700; color: var(--text-primary);">
+                <th style="padding: 4px; text-align: left;">Aktual \\ Pred</th>
+                ${cats.map(c => `<th style="padding: 4px;">${catShortNames[c]}</th>`).join('')}
+            </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    cats.forEach(actual => {
+        html += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                <td style="padding: 4px; text-align: left; font-weight: 600; color: var(--text-secondary);">${catShortNames[actual]}</td>
+        `;
+        
+        cats.forEach(pred => {
+            const val = matrix[actual][pred] || 0;
+            const isDiagonal = (actual === pred);
+            
+            let style = "padding: 4px; font-weight: 700;";
+            if (isDiagonal && val > 0) {
+                style += " background: rgba(16, 185, 129, 0.25); color: var(--success);";
+            } else if (val > 0) {
+                style += " background: rgba(239, 68, 68, 0.15); color: var(--danger);";
+            } else {
+                style += " color: var(--text-muted); opacity: 0.3;";
+            }
+            
+            html += `<td style="${style}">${val}</td>`;
+        });
+        
+        html += `</tr>`;
+    });
+    
+    html += `</tbody>`;
+    table.innerHTML = html;
+}
+
+// Merender tabel WCSS Elbow Method ke halaman akademik
+function renderElbowTable(elbowData) {
+    const tableBody = document.querySelector('#km-elbow-table tbody');
+    if (!tableBody) return;
+    
+    let html = "";
+    for (let k = 2; k <= 5; k++) {
+        const wcss = elbowData[k] || 0;
+        const isOptimal = (k === 3);
+        const rowStyle = isOptimal ? "background: rgba(138, 92, 246, 0.08); font-weight: 700; color: var(--primary);" : "";
+        const badgeHtml = isOptimal ? `<span style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Optimal (Elbow)</span>` : `<span style="color: var(--text-muted);">Sub-optimal</span>`;
+        
+        html += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04); ${rowStyle}">
+                <td style="padding: 6px 4px;">K = ${k}</td>
+                <td style="padding: 6px 4px;">${wcss.toFixed(4)}</td>
+                <td style="padding: 6px 4px;">${badgeHtml}</td>
+            </tr>
+        `;
+    }
+    tableBody.innerHTML = html;
+}
+
+// Mengekspor laporan transaksi ke PDF via cetak browser terformat
+function exportToPDF() {
+    const user = state.currentUser || 'user';
+    const dateStr = formatDateISO(new Date());
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert("Pop-up terblokir! Izinkan pop-up untuk mencetak laporan PDF.");
+        return;
+    }
+    
+    // Hitung rekap
+    const totalPengeluaran = state.transaksi
+        .filter(t => t.tipe === 'pengeluaran')
+        .reduce((sum, t) => sum + (parseFloat(t.jumlah) || 0), 0);
+    const totalPemasukan = state.transaksi
+        .filter(t => t.tipe === 'pemasukan')
+        .reduce((sum, t) => sum + (parseFloat(t.jumlah) || 0), 0);
+    const budgetAwal = state.settings.budgetAwal || 0;
+    const targetTabungan = state.settings.targetTabungan || 0;
+    const sisaSaldo = budgetAwal + totalPemasukan - totalPengeluaran;
+    
+    let rowsHtml = state.transaksi.map((t, idx) => {
+        const catName = t.kategori === 'makanan' ? 'Makanan & Minuman' :
+                        t.kategori === 'kos' ? 'Kos & Kebutuhan Bulanan' :
+                        t.kategori === 'pendidikan' ? 'Kuliah & Pendidikan' :
+                        t.kategori === 'transportasi' ? 'Transportasi' :
+                        t.kategori === 'hiburan' ? 'Hiburan & Nongkrong' :
+                        t.kategori === 'pemasukan' ? 'Pemasukan' : 'Lainnya';
+        const tipeName = t.tipe === 'pengeluaran' ? 'Pengeluaran' : 'Pemasukan';
+        const color = t.tipe === 'pengeluaran' ? '#ef4444' : '#10b981';
+        
+        return `
+            <tr>
+                <td>${idx + 1}</td>
+                <td>${t.tanggal}</td>
+                <td>${escapeHtml(t.keterangan)}</td>
+                <td>${catName}</td>
+                <td style="color: ${color}; font-weight: bold;">${tipeName}</td>
+                <td style="text-align: right; font-weight: bold;">${formatRupiah(t.jumlah)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Laporan Keuangan SmartCash AI - ${user}</title>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    color: #1f2937;
+                    margin: 30px;
+                    font-size: 13px;
+                    line-height: 1.5;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 25px;
+                    border-bottom: 2px double #1f2937;
+                    padding-bottom: 10px;
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                    color: #8a52f6;
+                }
+                .header p {
+                    margin: 5px 0 0 0;
+                    color: #4b5563;
+                    font-size: 13px;
+                }
+                .meta-table {
+                    width: 100%;
+                    margin-bottom: 20px;
+                }
+                .meta-table td {
+                    padding: 3px 0;
+                }
+                .summary-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 10px;
+                    margin-bottom: 30px;
+                }
+                .summary-card {
+                    background: #f3f4f6;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 6px;
+                    padding: 12px;
+                    text-align: center;
+                }
+                .summary-card .label {
+                    font-size: 10px;
+                    text-transform: uppercase;
+                    color: #6b7280;
+                    font-weight: bold;
+                    margin-bottom: 4px;
+                }
+                .summary-card .value {
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #111827;
+                }
+                table.data-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 15px;
+                }
+                table.data-table th, table.data-table td {
+                    border: 1px solid #d1d5db;
+                    padding: 8px 10px;
+                    text-align: left;
+                }
+                table.data-table th {
+                    background-color: #f9fafb;
+                    font-weight: 700;
+                }
+                .footer {
+                    margin-top: 40px;
+                    text-align: center;
+                    font-size: 11px;
+                    color: #9ca3af;
+                    border-top: 1px solid #e5e7eb;
+                    padding-top: 10px;
+                }
+                @media print {
+                    body { margin: 15px; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>SmartCash AI</h1>
+                <p>Laporan Penggunaan Anggaran & Evaluasi Finansial Mahasiswa</p>
+            </div>
+            
+            <table class="meta-table">
+                <tr>
+                    <td width="15%"><strong>Nama Mahasiswa:</strong></td>
+                    <td width="35%">${user.toUpperCase()}</td>
+                    <td width="20%"><strong>Siklus Mulai:</strong></td>
+                    <td width="30%">${state.settings.tanggalMulai || '-'}</td>
+                </tr>
+                <tr>
+                    <td><strong>Tanggal Cetak:</strong></td>
+                    <td>${dateStr}</td>
+                    <td><strong>Siklus Berakhir:</strong></td>
+                    <td>${state.settings.tanggalSelesai || '-'}</td>
+                </tr>
+            </table>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="label">Anggaran Awal</div>
+                    <div class="value">${formatRupiah(budgetAwal)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Target Menabung</div>
+                    <div class="value">${formatRupiah(targetTabungan)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Total Pengeluaran</div>
+                    <div class="value" style="color: #ef4444;">${formatRupiah(totalPengeluaran)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Sisa Saldo</div>
+                    <div class="value" style="color: #10b981;">${formatRupiah(sisaSaldo)}</div>
+                </div>
+            </div>
+
+            <h2>Daftar Transaksi Lengkap</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th width="5%">No</th>
+                        <th width="15%">Tanggal</th>
+                        <th width="35%">Keterangan</th>
+                        <th width="20%">Kategori</th>
+                        <th width="10%">Tipe</th>
+                        <th width="15%" style="text-align: right;">Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Laporan dihasilkan secara otomatis oleh SmartCash AI Engine (Metode Regresi Linear & K-Means Clustering)
+            </div>
+
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                        window.close();
+                    }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }

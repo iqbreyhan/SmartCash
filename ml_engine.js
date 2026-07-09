@@ -134,10 +134,10 @@ class NaiveBayesClassifier {
 
     /**
      * Evaluasi Performa Kuantitatif Model (Hold-Out Testing Dataset)
-     * Menghasilkan Akurasi, Presisi, Recall, dan F1-Score secara dinamis
+     * Menghasilkan Akurasi, Presisi, Recall, F1-Score, dan Confusion Matrix secara dinamis
      */
     evaluateModel() {
-        // Dataset uji independen (tidak dimasukkan ke data latih dasar)
+        // Dataset uji independen
         const testSet = [
             { text: "beli bubur ayam mang husein", category: "makanan" },
             { text: "kopi kenangan susu gula aren", category: "makanan" },
@@ -157,6 +157,15 @@ class NaiveBayesClassifier {
         const tp = {};
         const fp = {};
         const fn = {};
+        
+        // Inisialisasi Confusion Matrix 6x6
+        const confusionMatrix = {};
+        this.categories.forEach(actualCat => {
+            confusionMatrix[actualCat] = {};
+            this.categories.forEach(predCat => {
+                confusionMatrix[actualCat][predCat] = 0;
+            });
+        });
 
         this.categories.forEach(cat => {
             tp[cat] = 0;
@@ -167,6 +176,11 @@ class NaiveBayesClassifier {
         testSet.forEach(sample => {
             const pred = this.classify(sample.text).category;
             const actual = sample.category;
+
+            // Catat ke Confusion Matrix
+            if (confusionMatrix[actual] && confusionMatrix[actual].hasOwnProperty(pred)) {
+                confusionMatrix[actual][pred]++;
+            }
 
             if (pred === actual) {
                 correct++;
@@ -201,6 +215,8 @@ class NaiveBayesClassifier {
             precision: totalPrecision / validClasses,
             recall: totalRecall / validClasses,
             f1Score: totalF1 / validClasses,
+            confusionMatrix: confusionMatrix,
+            categories: this.categories,
             testSize: testSet.length
         };
     }
@@ -372,13 +388,101 @@ class KMeansRecommender {
         });
 
         const userClusterId = peers[userIndex].cluster;
+        
+        // 4. Hitung Elbow WCSS untuk K = 2, 3, 4, 5
+        const normalizedPointsOnly = peers.map(p => p.normalized);
+        const elbowResults = this.calculateElbowWCSS(normalizedPointsOnly);
 
         return {
             clusterId: userClusterId,
             metadata: this.clusterMetadata[userClusterId],
             wcss: wcss,
             normalizedUser: peers[userIndex].normalized,
-            totalDataSize: peers.length
+            totalDataSize: peers.length,
+            elbow: elbowResults
         };
+    }
+
+    calculateElbowWCSS(normalizedPoints) {
+        const elbowResults = {};
+        const numFeatures = 3;
+        
+        for (let kVal = 2; kVal <= 5; kVal++) {
+            // Centroids awal didasarkan pada pembagian rentang dataset
+            let tempCentroids = [];
+            for (let c = 0; c < kVal; c++) {
+                const idx = Math.floor((c / kVal) * normalizedPoints.length);
+                tempCentroids.push([...normalizedPoints[idx]]);
+            }
+            
+            let tempClusters = Array(normalizedPoints.length).fill(-1);
+            let changed = true;
+            let iter = 0;
+            
+            while (changed && iter < 10) {
+                changed = false;
+                iter++;
+                
+                // Assign data points to closest centroid
+                normalizedPoints.forEach((p, pIdx) => {
+                    let bestCluster = 0;
+                    let minDist = Infinity;
+                    
+                    for (let c = 0; c < kVal; c++) {
+                        let distSq = 0;
+                        for (let j = 0; j < numFeatures; j++) {
+                            distSq += Math.pow(p[j] - tempCentroids[c][j], 2);
+                        }
+                        const dist = Math.sqrt(distSq);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            bestCluster = c;
+                        }
+                    }
+                    
+                    if (tempClusters[pIdx] !== bestCluster) {
+                        tempClusters[pIdx] = bestCluster;
+                        changed = true;
+                    }
+                });
+                
+                // Re-calculate centroids
+                for (let c = 0; c < kVal; c++) {
+                    const membersIndices = [];
+                    tempClusters.forEach((cl, idx) => {
+                        if (cl === c) membersIndices.push(idx);
+                    });
+                    
+                    if (membersIndices.length === 0) continue;
+                    
+                    const newCentroid = Array(numFeatures).fill(0);
+                    membersIndices.forEach(idx => {
+                        for (let j = 0; j < numFeatures; j++) {
+                            newCentroid[j] += normalizedPoints[idx][j];
+                        }
+                    });
+                    
+                    for (let j = 0; j < numFeatures; j++) {
+                        tempCentroids[c][j] = newCentroid[j] / membersIndices.length;
+                    }
+                }
+            }
+            
+            // Hitung WCSS untuk K ini
+            let wcss = 0;
+            normalizedPoints.forEach((p, pIdx) => {
+                const c = tempClusters[pIdx];
+                if (c === -1) return;
+                let distSq = 0;
+                for (let j = 0; j < numFeatures; j++) {
+                    distSq += Math.pow(p[j] - tempCentroids[c][j], 2);
+                }
+                wcss += distSq;
+            });
+            
+            elbowResults[kVal] = wcss;
+        }
+        
+        return elbowResults;
     }
 }

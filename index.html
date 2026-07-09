@@ -152,9 +152,14 @@
             <div class="card">
                 <div class="section-title" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <span>Filter Kategori</span>
-                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.72rem; display: flex; align-items: center; gap: 6px; border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);" onclick="exportToCSV()">
-                        <i class="fa-solid fa-file-csv" style="color: var(--success);"></i> Ekspor CSV
-                    </button>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.72rem; display: flex; align-items: center; gap: 5px; border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);" onclick="exportToCSV()">
+                            <i class="fa-solid fa-file-csv" style="color: var(--success);"></i> CSV
+                        </button>
+                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.72rem; display: flex; align-items: center; gap: 5px; border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);" onclick="exportToPDF()">
+                            <i class="fa-solid fa-file-pdf" style="color: var(--danger);"></i> PDF
+                        </button>
+                    </div>
                 </div>
                 <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px;" id="category-filters">
                     <button class="btn btn-secondary active-filter" style="padding: 6px 12px; font-size: 0.75rem; flex: none;" onclick="filterTransactions('semua', this)">Semua</button>
@@ -305,7 +310,7 @@
                     <div style="font-size: 0.75rem; font-weight: 700; color: var(--secondary); margin-bottom: 6px;">
                         1. Naive Bayes Classifier (Auto-Kategori)
                     </div>
-                    <div class="ai-forecast-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                    <div class="ai-forecast-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
                         <div style="background: rgba(0,0,0,0.12); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02);">
                             <div style="font-size: 0.65rem; color: var(--text-secondary);">Akurasi Model</div>
                             <strong id="nb-accuracy" style="font-size: 0.95rem; color: var(--success);">0.0%</strong>
@@ -324,17 +329,55 @@
                         </div>
                     </div>
 
+                    <!-- Confusion Matrix 6x6 -->
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-top: 10px; margin-bottom: 5px;">
+                        Matriks Kebingungan (Confusion Matrix)
+                    </div>
+                    <div style="overflow-x: auto; margin-bottom: 15px; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 6px; border: 1px solid rgba(255,255,255,0.02);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.58rem; text-align: center; min-width: 280px;" id="nb-confusion-matrix-table">
+                            <!-- Diisi oleh Javascript -->
+                        </table>
+                        <div style="font-size: 0.55rem; color: var(--text-muted); margin-top: 4px; text-align: left; padding: 0 4px;">
+                            *Baris: Kategori Aktual, Kolom: Kategori Prediksi. Sel hijau adalah klasifikasi yang sukses (diagonal utama).
+                        </div>
+                    </div>
+
                     <div style="font-size: 0.75rem; font-weight: 700; color: var(--secondary); margin-bottom: 6px;">
                         2. K-Means Clustering (Rekomendasi Profil)
                     </div>
-                    <div class="ai-forecast-grid" style="grid-template-columns: 1fr; gap: 8px;">
+                    <div class="ai-forecast-grid" style="grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px;">
                         <div style="background: rgba(0,0,0,0.12); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02); display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-size: 0.7rem; color: var(--text-secondary);">Within-Cluster Sum of Squares (WCSS):</span>
                             <strong id="km-wcss" style="color: var(--warning);">0.000</strong>
                         </div>
-                        <div style="font-size: 0.62rem; color: var(--text-muted); line-height: 1.35; padding: 0 4px;">
-                            *Nilai WCSS yang semakin kecil membuktikan pengelompokan pola pengeluaran mahasiswa dalam klaster semakin rapat dan akurat secara matematis.
-                        </div>
+                    </div>
+
+                    <!-- Elbow Method Table -->
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-top: 10px; margin-bottom: 5px;">
+                        Analisis Elbow Method (Nilai WCSS per K)
+                    </div>
+                    <div style="overflow-x: auto; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 6px; border: 1px solid rgba(255,255,255,0.02); margin-bottom: 8px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.65rem; text-align: left;" id="km-elbow-table">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); font-weight: 700;">
+                                    <th style="padding: 4px;">Jumlah Klaster (K)</th>
+                                    <th style="padding: 4px;">WCSS (Kepadatan)</th>
+                                    <th style="padding: 4px;">Status Optimal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Diisi oleh Javascript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="font-size: 0.62rem; color: var(--text-muted); line-height: 1.35; padding: 0 4px; margin-bottom: 10px;">
+                        *Siku optimal (Elbow) tercapai pada K=3 karena setelah titik ini penurunan WCSS melambat secara drastis.
+                    </div>
+
+                    <!-- Status Ukuran Dataset Latih -->
+                    <div style="font-size: 0.7rem; background: rgba(138, 92, 246, 0.05); color: var(--primary); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(138, 92, 246, 0.15); font-weight: 600; display: flex; justify-content: space-between; align-items: center;" id="ml-training-info">
+                        <span>Status Training Model:</span>
+                        <span>0 Data Latih</span>
                     </div>
                 </div>
 
