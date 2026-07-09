@@ -1077,31 +1077,36 @@ async function seedDemoData() {
     const today = new Date();
     state.transaksi = []; // bersihkan data lama agar hasil grafik bersih
     
-    // Suntik data pengeluaran teratur dalam 5 hari berturut-turut ke belakang
-    const baseAmount = 60000; // rata-rata pengeluaran Rp 60.000 / hari
-    const categories = ['makanan', 'transportasi', 'makanan', 'hiburan', 'kos'];
-    const descs = ['Makan warteg + es teh', 'Bensin motor', 'Makan siang McD', 'Nongkrong kafe', 'Beli Sabun & Sampo'];
+    // Suntik data pengeluaran teratur dalam 9 hari berturut-turut ke belakang
+    const baseAmount = 60000;
+    const categories = [
+        'makanan', 'transportasi', 'makanan', 'hiburan', 
+        'kos', 'pendidikan', 'makanan', 'transportasi', 'hiburan'
+    ];
+    const descs = [
+        'Makan siang warteg', 'Bensin Pertalite', 'Makan geprek gepuk', 'Nongkrong kafe', 
+        'Sabun mandi & odol', 'Print tugas makalah', 'Makan malam indomie', 'Tarif parkir & grab', 'Rokok & kopi senja'
+    ];
     
-    for (let i = 4; i >= 1; i--) {
+    for (let i = 9; i >= 1; i--) {
         const d = new Date(today);
         d.setDate(today.getDate() - i);
         
-        // Sedikit variasi pengeluaran agar grafik terlihat alami (±Rp 10.000)
         const variance = (Math.random() * 20000) - 10000;
         const finalAmt = Math.round((baseAmount + variance) / 1000) * 1000;
         
         state.transaksi.push({
             id: `dummy-${i}`,
             tipe: 'pengeluaran',
-            amount: finalAmt, // backwards-compatibility
+            amount: finalAmt,
             jumlah: finalAmt,
-            keterangan: descs[4 - i],
-            kategori: categories[4 - i],
+            keterangan: descs[9 - i],
+            kategori: categories[9 - i],
             tanggal: formatDateISO(d)
         });
     }
 
-    // Suntik satu transaksi ANOMALI (Outlier Z-score) untuk membuktikan pendeteksi AI
+    // Suntik satu transaksi ANOMALI (Outlier Z-score) untuk hari ini (Total 10 hari data)
     state.transaksi.push({
         id: `dummy-anomaly`,
         tipe: 'pengeluaran',
