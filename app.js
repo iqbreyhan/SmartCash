@@ -16,6 +16,9 @@ let state = {
     tipeForm: 'pengeluaran' // default form tipe
 };
 
+let nbClassifier = new NaiveBayesClassifier();
+let kmeansRecommender = new KMeansRecommender();
+
 // Inisialisasi awal saat dokumen siap
 document.addEventListener("DOMContentLoaded", () => {
     initDates();
@@ -110,6 +113,16 @@ async function loadState() {
     // Muat riwayat backtesting secara asinkron dari basis data
     state.history = await DbService.loadHistory(user);
     
+    // Latih model Naive Bayes secara dinamis dengan transaksi historis pengguna
+    nbClassifier = new NaiveBayesClassifier();
+    if (state.transaksi && state.transaksi.length > 0) {
+        state.transaksi.forEach(t => {
+            if (t.tipe === 'pengeluaran' && t.keterangan && t.kategori) {
+                nbClassifier.train(t.keterangan, t.kategori);
+            }
+        });
+    }
+
     // Jalankan perbaruan UI utama
     updateUI();
 }
@@ -153,11 +166,21 @@ function setupEventListeners() {
             const val = e.target.value;
             showSuggestions(val);
             
-            // Auto-kategori instan jika diketik manual sama persis
-            const match = findPastTransaction(val.trim());
-            if (match && match.kategori) {
-                const catInput = document.getElementById('t-category');
-                if (catInput) catInput.value = match.kategori;
+            // Auto-kategori instan berbasis Naive Bayes Classifier
+            const label = document.querySelector('#group-kategori label');
+            if (val.trim().length > 2) {
+                const prediction = nbClassifier.classify(val.trim());
+                if (prediction && prediction.category) {
+                    const catInput = document.getElementById('t-category');
+                    if (catInput) catInput.value = prediction.category;
+                    if (label) {
+                        label.innerHTML = `Kategori <span style="font-size: 0.65rem; color: var(--success); font-weight: 700;">(AI Naive Bayes: ${prediction.confidence}% yakin)</span>`;
+                    }
+                }
+            } else {
+                if (label) {
+                    label.innerHTML = `Kategori`;
+                }
             }
         });
         
@@ -529,6 +552,84 @@ function updateUI() {
         }
     }
     
+    // ==========================================
+    // K-MEANS CLUSTERING RECOMMENDER & METRICS
+    // ==========================================
+    const kmeansClusterBadge = document.getElementById('kmeans-cluster-badge');
+    const kmeansAiRecom = document.getElementById('kmeans-ai-recom');
+    const nbAccuracyEl = document.getElementById('nb-accuracy');
+    const nbF1El = document.getElementById('nb-f1');
+    const nbPrecisionEl = document.getElementById('nb-precision');
+    const nbRecallEl = document.getElementById('nb-recall');
+    const kmWcssEl = document.getElementById('km-wcss');
+    
+    // Hitung fitur-fitur untuk K-Means
+    const totalPengeluaran = state.transaksi
+        .filter(t => t.tipe === 'pengeluaran')
+        .reduce((sum, t) => sum + (parseFloat(t.jumlah) || 0), 0);
+        
+    const totalPemasukan = state.transaksi
+        .filter(t => t.tipe === 'pemasukan')
+        .reduce((sum, t) => sum + (parseFloat(t.jumlah) || 0), 0);
+        
+    const budgetAwal = state.settings.budgetAwal || 1500000;
+    
+    // Fitur 1: Rata-rata belanja harian
+    const pengeluaranSaja = state.transaksi.filter(t => t.tipe === 'pengeluaran');
+    const uniqueDays = new Set(pengeluaranSaja.map(t => t.tanggal)).size || 1;
+    const avgDailySpend = totalPengeluaran / uniqueDays;
+    
+    // Fitur 2: Rasio tabungan bulanan (aktual tabungan dari sisa uang)
+    const sisaUang = budgetAwal + totalPemasukan - totalPengeluaran;
+    const savingsRate = Math.max(0, Math.min(1, sisaUang / budgetAwal));
+    
+    // Fitur 3: Persentase pengeluaran hiburan terhadap total pengeluaran
+    const totalHiburan = state.transaksi
+        .filter(t => t.tipe === 'pengeluaran' && t.kategori === 'hiburan')
+        .reduce((sum, t) => sum + (parseFloat(t.jumlah) || 0), 0);
+    const entertainmentRatio = totalPengeluaran > 0 ? (totalHiburan / totalPengeluaran) * 100 : 0;
+    
+    const userFeatures = [avgDailySpend, savingsRate, entertainmentRatio];
+    
+    if (pengeluaranSaja.length >= 3) {
+        const result = kmeansRecommender.runClustering(userFeatures);
+        
+        if (kmeansClusterBadge && kmeansAiRecom) {
+            kmeansClusterBadge.textContent = result.metadata.name;
+            kmeansClusterBadge.style.color = result.metadata.color;
+            kmeansClusterBadge.style.background = `rgba(255,255,255,0.05)`;
+            kmeansClusterBadge.style.borderColor = result.metadata.color;
+            kmeansClusterBadge.style.border = `1px solid ${result.metadata.color}`;
+            
+            kmeansAiRecom.innerHTML = `
+                <i class="fa-solid fa-brain" style="color: ${result.metadata.color}; margin-right: 6px;"></i>
+                <strong>Klaster:</strong> ${result.metadata.name}<br>
+                <strong>Deskripsi:</strong> ${result.metadata.desc}<br><br>
+                💡 <strong>Tips Rekomendasi Finansial Kelompok:</strong> ${result.metadata.advice}
+            `;
+        }
+        
+        // Bind WCSS
+        if (kmWcssEl) {
+            kmWcssEl.textContent = result.wcss.toFixed(4);
+        }
+    } else {
+        if (kmeansClusterBadge) kmeansClusterBadge.textContent = "Menunggu Data...";
+        if (kmeansAiRecom) {
+            kmeansAiRecom.innerHTML = `<i class="fa-solid fa-circle-info" style="color: var(--warning); margin-right: 6px;"></i> AI membutuhkan minimal 3 transaksi pengeluaran untuk menentukan klaster belanja Anda secara akurat.`;
+        }
+        if (kmWcssEl) kmWcssEl.textContent = "0.0000";
+    }
+    
+    // Jalankan Evaluasi Naive Bayes secara dinamis
+    const nbMetrics = nbClassifier.evaluateModel();
+    if (nbAccuracyEl && nbF1El && nbPrecisionEl && nbRecallEl) {
+        nbAccuracyEl.textContent = `${(nbMetrics.accuracy * 100).toFixed(1)}%`;
+        nbF1El.textContent = nbMetrics.f1Score.toFixed(3);
+        nbPrecisionEl.textContent = nbMetrics.precision.toFixed(3);
+        nbRecallEl.textContent = nbMetrics.recall.toFixed(3);
+    }
+    
     // 3. Render Transaksi di Dashboard (Maksimal 5)
     renderTransactionList('dashboard-transaction-list', 5);
     
@@ -641,6 +742,10 @@ function openModal() {
     // Set default date to today
     document.getElementById('t-date').value = formatDateISO(new Date());
     
+    // Reset label kategori
+    const label = document.querySelector('#group-kategori label');
+    if (label) label.innerHTML = `Kategori`;
+    
     // Muat saran keterangan otomatis
     showSuggestions("");
 }
@@ -728,13 +833,22 @@ function showSuggestions(query = "") {
             
             descInput.value = selectedDesc;
             
+            // Prediksi kategori dengan Naive Bayes untuk membuktikan model berjalan
+            const prediction = nbClassifier.classify(selectedDesc);
+            const resolvedCat = (prediction && prediction.confidence > 40) ? prediction.category : selectedCat;
+            
             const catInput = document.getElementById('t-category');
-            if (catInput && selectedCat) {
-                catInput.value = selectedCat;
+            if (catInput && resolvedCat) {
+                catInput.value = resolvedCat;
+            }
+            
+            const label = document.querySelector('#group-kategori label');
+            if (label && prediction) {
+                label.innerHTML = `Kategori <span style="font-size: 0.65rem; color: var(--success); font-weight: 700;">(AI Naive Bayes: ${prediction.confidence}% yakin)</span>`;
             }
             
             suggestionsBox.style.display = 'none';
-            console.log(`[Auto-Kategori] Memilih '${selectedDesc}' dengan kategori '${selectedCat}'`);
+            console.log(`[Auto-Kategori ML] Memilih '${selectedDesc}' dengan kategori '${resolvedCat}' (${prediction.confidence}% confidence)`);
         });
     });
 }
@@ -807,6 +921,11 @@ async function submitTransaction() {
     };
     
     state.transaksi.push(newTx);
+    
+    // Latih kembali Naive Bayes Classifier secara dinamis
+    if (state.tipeForm === 'pengeluaran') {
+        nbClassifier.train(desc, category);
+    }
     
     // Tampilkan state menyimpan
     const saveBtn = document.querySelector('#transaction-modal .btn-primary');
@@ -1660,4 +1779,56 @@ function toggleAcademicPanel() {
         btn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Mode Sidang Skripsi (Tampilkan Statistik & Teori)`;
         btn.style.background = "transparent";
     }
+}
+
+// Mengekspor riwayat transaksi ke format CSV
+function exportToCSV() {
+    if (!state.transaksi || state.transaksi.length === 0) {
+        alert("Tidak ada transaksi untuk diekspor!");
+        return;
+    }
+    
+    // Tentukan header kolom
+    const headers = ["Tanggal", "Keterangan", "Kategori", "Tipe", "Jumlah (Rp)"];
+    
+    // Konversi baris data
+    const rows = state.transaksi.map(t => {
+        const catName = t.kategori === 'makanan' ? 'Makanan & Minuman' :
+                        t.kategori === 'kos' ? 'Kos & Kebutuhan Bulanan' :
+                        t.kategori === 'pendidikan' ? 'Kuliah & Pendidikan' :
+                        t.kategori === 'transportasi' ? 'Transportasi' :
+                        t.kategori === 'hiburan' ? 'Hiburan & Nongkrong' :
+                        t.kategori === 'pemasukan' ? 'Pemasukan' : 'Lainnya';
+                        
+        const tipeName = t.tipe === 'pengeluaran' ? 'Pengeluaran' : 'Pemasukan';
+        const descEscaped = `"${(t.keterangan || '').replace(/"/g, '""')}"`;
+        
+        return [
+            t.tanggal || '',
+            descEscaped,
+            catName,
+            tipeName,
+            t.jumlah || 0
+        ];
+    });
+    
+    // Gabungkan header dan data
+    const csvContent = "\uFEFF" // Byte Order Mark (BOM) agar Excel membaca UTF-8 dengan benar
+        + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        
+    // Buat blob dan trigger download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    const dateStr = formatDateISO(new Date());
+    link.setAttribute("href", url);
+    link.setAttribute("download", `laporan_smartcash_${state.currentUser || 'user'}_${dateStr}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log(`[Ekspor CSV] Berhasil mengunduh laporan transaksi.`);
 }
