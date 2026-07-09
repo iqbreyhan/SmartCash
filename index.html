@@ -13,6 +13,77 @@
     <link rel="stylesheet" href="styles.css?v=19">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Profile Dropdown Popover */
+        .profile-dropdown {
+            position: absolute !important;
+            top: 50px !important;
+            right: 0 !important;
+            width: 220px !important;
+            background: rgba(15, 23, 42, 0.95) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+            z-index: 9999 !important;
+            transform-origin: top right !important;
+            animation: dropdownFade 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            padding: 5px 0 !important;
+        }
+
+        @keyframes dropdownFade {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .dropdown-menu {
+            padding: 4px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 2px !important;
+        }
+
+        .dropdown-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 10px 14px !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            text-decoration: none !important;
+            font-size: 0.78rem !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
+            transition: all 0.15s ease !important;
+            border-bottom: none !important;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #ffffff !important;
+            text-decoration: none !important;
+        }
+
+        .dropdown-item i {
+            width: 14px !important;
+            font-size: 0.85rem !important;
+        }
+
+        .dropdown-item.danger {
+            color: #ef4444 !important;
+        }
+
+        .dropdown-item.danger:hover {
+            background: rgba(239, 68, 68, 0.12) !important;
+            color: #ef4444 !important;
+        }
+    </style>
 </head>
 <body>
 
